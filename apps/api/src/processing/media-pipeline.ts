@@ -29,6 +29,15 @@ function ffmpegThreadsPerJob(): number {
   return parsed;
 }
 
+function ffmpegVideoEncoder(): string {
+  const raw = process.env.STREAM_FORGE_FFMPEG_VIDEO_ENCODER?.trim();
+  if (!raw) {
+    return "libx264";
+  }
+
+  return raw;
+}
+
 export function isRealMediaPipelineEnabled(): boolean {
   return mediaPipelineMode() === "real";
 }
@@ -181,6 +190,14 @@ export async function transcodeChunkForProfile(
   const durationSeconds = Math.max(0.05, endMs - startMs) / 1000;
   const threads = ffmpegThreadsPerJob();
   const preset = profile.profile === "480p" ? "ultrafast" : "veryfast";
+  const videoEncoder = ffmpegVideoEncoder();
+
+  const videoArgs: string[] = ["-c:v", videoEncoder];
+  if (videoEncoder === "libx264") {
+    videoArgs.push("-preset", preset, "-threads", `${threads}`);
+  }
+
+  videoArgs.push("-b:v", `${profile.bitrateKbps}k`);
 
   await runBinary("ffmpeg", [
     "-y",
@@ -192,14 +209,7 @@ export async function transcodeChunkForProfile(
     `${durationSeconds}`,
     "-vf",
     `scale=${profile.width}:${profile.height}`,
-    "-c:v",
-    "libx264",
-    "-preset",
-    preset,
-    "-threads",
-    `${threads}`,
-    "-b:v",
-    `${profile.bitrateKbps}k`,
+    ...videoArgs,
     "-c:a",
     "aac",
     "-b:a",

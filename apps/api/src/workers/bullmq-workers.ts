@@ -174,7 +174,8 @@ export function startBullMqWorkers(logger: FastifyBaseLogger, redisUrl: string, 
         videoId: job?.data.videoId,
         attemptCount: job?.attemptsMade,
         outcome: "failed",
-        error,
+        err: error instanceof Error ? error : new Error(String(error ?? "unknown")),
+        errorMessage: error instanceof Error ? error.message : String(error ?? "unknown"),
         ...timing
       }, "Worker job failed");
 
@@ -204,7 +205,8 @@ export function startBullMqWorkers(logger: FastifyBaseLogger, redisUrl: string, 
               videoId: job.data.videoId,
               attemptCount: job.attemptsMade,
               outcome: "failure_recording_failed",
-              failureError
+              err: failureError instanceof Error ? failureError : new Error(String(failureError ?? "unknown")),
+              failureErrorMessage: failureError instanceof Error ? failureError.message : String(failureError ?? "unknown")
             },
             "Failed to record terminal worker failure"
           );
