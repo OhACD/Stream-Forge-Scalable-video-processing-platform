@@ -11,7 +11,7 @@
     "dev": "node --watch --enable-source-maps dist/index.js",
     "dev:workers": "STREAM_FORGE_START_WORKERS=true node --watch --enable-source-maps dist/index.js",
     "start": "node --enable-source-maps dist/index.js",
-    "test:acceptance": "npm run build -w @stream-forge/contracts && npm run build -w @stream-forge/core && npm run build && node --test test/**/*.test.mjs"
+    "test:acceptance": "npm run build -w @stream-forge/contracts && npm run build -w @stream-forge/core && npm run build && node --test test/*.test.mjs"
   },
   "dependencies": {
     "@fastify/multipart": "^10.0.0",
