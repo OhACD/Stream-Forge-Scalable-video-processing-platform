@@ -1,0 +1,35 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    depends_on:
+      - redis
+    environment:
+      PORT: "4000"
+      HOST: "0.0.0.0"
+      STREAM_FORGE_REDIS_URL: redis://redis:6379
+      STREAM_FORGE_START_WORKERS: "true"
+      STREAM_FORGE_MEDIA_PIPELINE_MODE: real
+      STREAM_FORGE_TRANSCODE_CHUNK_SECONDS: "30"
+      STREAM_FORGE_TRANSCODE_CHUNK_WORKER_CONCURRENCY: "6"
+      STREAM_FORGE_FFMPEG_THREADS_PER_JOB: "2"
+      STREAM_FORGE_AUTH_MODE: dev
+      STREAM_FORGE_INTERNAL_TOKEN: dev-internal-token
+    ports:
+      - "4000:4000"
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    depends_on:
+      - api
+    ports:
+      - "3000:80"

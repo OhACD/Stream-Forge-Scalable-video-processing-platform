@@ -1,0 +1,49 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: stream-forge-worker-1080p
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/min-scale: "1"
+        autoscaling.knative.dev/max-scale: "10"
+        run.googleapis.com/cpu-throttling: "false"
+    spec:
+      timeoutSeconds: 3600
+      serviceAccountName: stream-forge-worker
+      containers:
+        - image: gcr.io/PROJECT_ID/stream-forge-api:latest
+          env:
+            - name: STREAM_FORGE_WORKER_PROFILE
+              value: "1080p"
+            - name: STREAM_FORGE_MEDIA_PIPELINE_MODE
+              value: "real"
+            - name: STREAM_FORGE_TRANSCODE_CHUNK_SECONDS
+              value: "30"
+            - name: STREAM_FORGE_TRANSCODE_CHUNK_WORKER_CONCURRENCY
+              value: "2"
+            - name: STREAM_FORGE_FFMPEG_THREADS_PER_JOB
+              value: "2"
+            - name: STREAM_FORGE_AUTH_MODE
+              value: "firebase"
+            - name: STREAM_FORGE_FIREBASE_PROJECT_ID
+              value: "PROJECT_ID"
+            - name: STREAM_FORGE_STORAGE_BUCKET
+              value: "PROJECT_ID.appspot.com"
+            - name: STREAM_FORGE_REPOSITORY
+              value: "firestore"
+            - name: STREAM_FORGE_REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: stream-forge-redis-url
+                  key: latest
+            - name: STREAM_FORGE_INTERNAL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: stream-forge-internal-token
+                  key: latest
+          resources:
+            requests:
+              cpu: "4"
+              memory: "8Gi"

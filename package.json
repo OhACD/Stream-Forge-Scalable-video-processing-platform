@@ -1,0 +1,25 @@
+{
+  "name": "stream-forge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "StreamForge implementation workspace",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @stream-forge/contracts && npm run build -w @stream-forge/core && npm run build -w @stream-forge/api && npm run build -w @stream-forge/web",
+    "typecheck": "npm run typecheck -w @stream-forge/contracts && npm run typecheck -w @stream-forge/core && npm run typecheck -w @stream-forge/api",
+    "dev:api": "npm run dev -w @stream-forge/api",
+    "dev:web": "npm run dev -w @stream-forge/web",
+    "dev:queue": "STREAM_FORGE_REDIS_URL=redis://127.0.0.1:6379 STREAM_FORGE_START_WORKERS=true npm run start -w @stream-forge/api",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down -v",
+    "redis:up": "docker-compose -f docker-compose.redis.yml up -d",
+    "redis:down": "docker-compose -f docker-compose.redis.yml down -v",
+    "smoke:queue": "sh ./scripts/queue-smoke-test.sh"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}

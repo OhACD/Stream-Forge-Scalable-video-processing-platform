@@ -1,0 +1,66 @@
+name: Deployment Readiness
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-readiness-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate-deploy-assets:
+    name: Validate Deploy Assets
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate deployment scripts and manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Ensure critical deployment scripts exist.
+          test -f deploy/gcp-deploy.sh
+          test -f deploy/gcp-provision.sh
+
+          # Ensure scripts parse as valid shell.
+          bash -n deploy/gcp-deploy.sh
+          bash -n deploy/gcp-provision.sh
+
+          # Ensure scripts are executable in-repo.
+          test -x deploy/gcp-deploy.sh
+          test -x deploy/gcp-provision.sh
+
+          # Ensure required Cloud Run manifests are present.
+          test -f deploy/cloudrun/api-service.yaml
+          test -f deploy/cloudrun/worker-1080p-service.yaml
+          test -f deploy/cloudrun/worker-720p-service.yaml
+          test -f deploy/cloudrun/worker-480p-service.yaml
+
+          # Ensure worker manifests pin a profile worker role.
+          rg -n 'name:\s*STREAM_FORGE_WORKER_PROFILE' deploy/cloudrun/worker-1080p-service.yaml
+          rg -n 'value:\s*"1080p"' deploy/cloudrun/worker-1080p-service.yaml
+          rg -n 'name:\s*STREAM_FORGE_WORKER_PROFILE' deploy/cloudrun/worker-720p-service.yaml
+          rg -n 'value:\s*"720p"' deploy/cloudrun/worker-720p-service.yaml
+          rg -n 'name:\s*STREAM_FORGE_WORKER_PROFILE' deploy/cloudrun/worker-480p-service.yaml
+          rg -n 'value:\s*"480p"' deploy/cloudrun/worker-480p-service.yaml
+
+          # Ensure Secret Manager references use the Cloud Run supported `latest` version alias.
+          rg -n 'key:\s*latest' deploy/cloudrun/*.yaml
+          if rg -n 'key:\s*(url|value)' deploy/cloudrun/*.yaml; then
+            echo "Found unsupported secretKeyRef version aliases in Cloud Run manifests"
+            exit 1
+          fi
+
+          # Ensure image placeholder exists for gcp-deploy.sh replacement logic.
+          rg -n 'image:\s*gcr\.io/PROJECT_ID/stream-forge-api:latest' deploy/cloudrun/*.yaml

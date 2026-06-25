@@ -1,0 +1,37 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: stream-forge-workers
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/min-scale: "1"
+        autoscaling.knative.dev/max-scale: "20"
+        run.googleapis.com/cpu-throttling: "false"
+    spec:
+      timeoutSeconds: 3600
+      serviceAccountName: stream-forge-workers
+      containers:
+        - image: gcr.io/PROJECT_ID/stream-forge-api:latest
+          ports:
+            - containerPort: 4000
+          env:
+            - name: PORT
+              value: "4000"
+            - name: HOST
+              value: "0.0.0.0"
+            - name: STREAM_FORGE_AUTH_MODE
+              value: "firebase"
+            - name: STREAM_FORGE_FIREBASE_PROJECT_ID
+              value: "PROJECT_ID"
+            - name: STREAM_FORGE_STORAGE_BUCKET
+              value: "PROJECT_ID.appspot.com"
+            - name: STREAM_FORGE_REPOSITORY
+              value: "firestore"
+            - name: STREAM_FORGE_REDIS_URL
+              value: "redis://REDIS_HOST:6379"
+            - name: STREAM_FORGE_START_WORKERS
+              value: "true"
+            - name: STREAM_FORGE_INTERNAL_TOKEN
+              value: "REPLACE_WITH_SECRET_MANAGER_VALUE"

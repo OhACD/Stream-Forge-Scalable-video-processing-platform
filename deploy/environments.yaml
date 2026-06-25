@@ -1,0 +1,123 @@
+# Multi-Environment Configuration for Stream Forge
+# Use this to configure environment-specific settings for dev, staging, and production
+
+environments:
+  dev:
+    description: "Local development with Docker Compose"
+    redis_url: "redis://redis:6379"
+    firestore_database: "(default)"
+    storage_bucket: "file:///path/to/.stream-forge-object-store"
+    auth_mode: "dev"
+    worker_profile: null  # null = all profiles in one container
+    worker_profiles: ["1080p", "720p", "480p", "360p"]
+    transcode_chunk_seconds: 30
+    transcode_chunk_worker_concurrency: 6
+    ffmpeg_threads_per_job: 2
+    media_pipeline_mode: "real"
+    services:
+      - name: "redis"
+        type: "external"
+        port: 6379
+      - name: "api"
+        type: "docker"
+        image: "stream-forge-api:latest"
+        port: 4000
+      - name: "web"
+        type: "docker"
+        image: "stream-forge-web:latest"
+        port: 3000
+
+  staging:
+    description: "Staging environment on GCP Cloud Run with split workers"
+    gcp_project_id: "stream-forge-staging"
+    gcp_region: "us-central1"
+    redis_url: "SECRET(stream-forge-redis-url)"
+    firestore_database: "stream-forge-staging"
+    storage_bucket: "stream-forge-staging-PROJECT_ID.appspot.com"
+    auth_mode: "firebase"
+    worker_profiles: ["1080p", "720p", "480p"]
+    transcode_chunk_seconds: 30
+    transcode_chunk_worker_concurrency: 2
+    ffmpeg_threads_per_job: 2
+    media_pipeline_mode: "real"
+    services:
+      - name: "stream-forge-api"
+        type: "cloud-run"
+        min_scale: 1
+        max_scale: 5
+        memory: "2Gi"
+        cpu: "1"
+      - name: "stream-forge-worker-1080p"
+        type: "cloud-run"
+        min_scale: 1
+        max_scale: 10
+        memory: "8Gi"
+        cpu: "4"
+      - name: "stream-forge-worker-720p"
+        type: "cloud-run"
+        min_scale: 1
+        max_scale: 10
+        memory: "8Gi"
+        cpu: "4"
+      - name: "stream-forge-worker-480p"
+        type: "cloud-run"
+        min_scale: 1
+        max_scale: 10
+        memory: "4Gi"
+        cpu: "2"
+
+  production:
+    description: "Production environment on GCP Cloud Run with split workers + monitoring"
+    gcp_project_id: "stream-forge-prod"
+    gcp_region: "us-central1"
+    redis_url: "SECRET(stream-forge-redis-url)"
+    firestore_database: "stream-forge-prod"
+    storage_bucket: "stream-forge-prod-PROJECT_ID.appspot.com"
+    auth_mode: "firebase"
+    worker_profiles: ["1080p", "720p", "480p"]
+    transcode_chunk_seconds: 30
+    transcode_chunk_worker_concurrency: 2
+    ffmpeg_threads_per_job: 2
+    media_pipeline_mode: "real"
+    services:
+      - name: "stream-forge-api"
+        type: "cloud-run"
+        min_scale: 2
+        max_scale: 20
+        memory: "2Gi"
+        cpu: "1"
+      - name: "stream-forge-worker-1080p"
+        type: "cloud-run"
+        min_scale: 2
+        max_scale: 20
+        memory: "8Gi"
+        cpu: "4"
+      - name: "stream-forge-worker-720p"
+        type: "cloud-run"
+        min_scale: 2
+        max_scale: 20
+        memory: "8Gi"
+        cpu: "4"
+      - name: "stream-forge-worker-480p"
+        type: "cloud-run"
+        min_scale: 1
+        max_scale: 10
+        memory: "4Gi"
+        cpu: "2"
+    monitoring:
+      enabled: true
+      sli_dashboards: true
+      alert_threshold_error_rate: 5
+      alert_threshold_latency_p95: 90000  # ms
+
+# Configuration Resolution Rules:
+# 1. Environment-specific values override defaults
+# 2. SECRET(name) values are resolved from GCP Secret Manager
+# 3. PROJECT_ID placeholder is replaced with actual GCP project ID
+# 4. Concurrency tuning: Profile queues use 2 concurrent jobs each (2 threads × 2 jobs = 4 cores)
+#    - 1080p: 4-core machine, high bitrate (~1000-2000kbps), slowest encoding
+#    - 720p: 4-core machine, medium bitrate (~800-1200kbps), medium encoding
+#    - 480p: 2-core machine, low bitrate (~500-800kbps), fastest with ultrafast preset
+# 5. Worker scaling: Each profile worker auto-scales independently based on queue depth
+#    - Min scale: At least 1 replica keeps warm, avoids cold starts
+#    - Max scale: Prevents cost runaway on surge load
