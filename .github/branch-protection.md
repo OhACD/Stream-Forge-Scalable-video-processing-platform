@@ -18,6 +18,9 @@ Add these exact check names:
 
 - Build and Typecheck
 - API Acceptance
+
+Enable this check later when deployment work resumes:
+
 - Validate Deploy Assets
 
 ## Optional hardening

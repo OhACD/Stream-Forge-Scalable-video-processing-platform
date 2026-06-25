@@ -72,7 +72,7 @@ Detailed runbooks and manifests:
 ## CI and release quality
 
 - CI workflow: `.github/workflows/ci.yml`
-- Deploy-readiness workflow: `.github/workflows/deployment-readiness.yml`
+- Deploy-readiness workflow (manual-only for now): `.github/workflows/deployment-readiness.yml`
 - Branch protection baseline: `.github/branch-protection.md`
 
 ## License
